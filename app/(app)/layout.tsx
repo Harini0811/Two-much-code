@@ -1,6 +1,6 @@
-import { supabase } from "@/lib/lib/supabase";
 "use client";
 
+import { supabase } from "@/lib/lib/supabase";
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Space_Grotesk, JetBrains_Mono } from "next/font/google";

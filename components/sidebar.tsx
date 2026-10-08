@@ -6,6 +6,9 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/ingestion", label: "Log ingestion" },
   { href: "/anomalies", label: "Anomalies" },
+  { href: "/approvals", label: "Approvals" },
+  { href: "/clouds", label: "Clouds" },
+  { href: "/audit", label: "Audit" },
 ];
 
 export default function Sidebar() {

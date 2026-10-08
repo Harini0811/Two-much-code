@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/lib/supabase";
 
 const STAGES = ["Detect", "Explain", "Quantify", "Recommend", "Simulate", "Approve", "Remediate", "Verify", "Audit"];
 const ACTIONS = ["", "", "", "", "Run simulation", "Approve change", "Remediate now", "Verify result", "Write audit entry"];
@@ -11,41 +12,39 @@ type Finding = {
   waste: number; cause: string; fix: string; sim: string; done: number;
 };
 
-const SEED: Finding[] = [
-  { id: "f1", cloud: "AWS", resource: "m5.4xlarge · prod-batch-07", type: "Idle compute", waste: 4820,
-    cause: "The nightly batch job was migrated to Fargate on Aug 14, but its EC2 host kept running. CPU has stayed under 3% for 54 days.",
-    fix: "Stop the instance, snapshot its volume, and terminate after 7 days.",
-    sim: "No dependent services found. Estimated saving $4,820/mo. Risk: low.", done: 4 },
-  { id: "f2", cloud: "Azure", resource: "12 unattached managed disks", type: "Orphaned storage", waste: 1960,
-    cause: "A decommissioned AKS node pool left its Premium SSDs behind. No VM has attached them since Sep 2.",
-    fix: "Snapshot to cool storage, then delete the disks.",
-    sim: "No attachments or backup policies reference these disks. Saving $1,960/mo. Risk: low.", done: 4 },
-  { id: "f3", cloud: "GCP", resource: "BigQuery · analytics-prod", type: "Cost anomaly", waste: 7340,
-    cause: "A scheduled query lost its partition filter after a schema change on Oct 1, so it now scans the full 38 TB table every hour.",
-    fix: "Restore the partition filter and add a per-query byte limit.",
-    sim: "Projected scan drops from 38 TB to 0.4 TB per run. Saving $7,340/mo. Risk: medium.", done: 5 },
-  { id: "f4", cloud: "AWS", resource: "NAT gateway · vpc-staging", type: "Idle network", waste: 1180,
-    cause: "Staging traffic moved to VPC endpoints, leaving this gateway with near-zero throughput.",
-    fix: "Remove the gateway and its Elastic IP.",
-    sim: "Applied. Saving $1,180/mo.", done: 7 },
-];
-
 const SPARK = [12, 14, 13, 15, 14, 16, 15, 17, 16, 18, 41, 44, 43];
 
 export default function Dashboard() {
-  const [items, setItems] = useState(SEED);
+  const [items, setItems] = useState<Finding[]>([]);
   const [sel, setSel] = useState("f1");
-  const [log, setLog] = useState<string[]>(["Ingested 2.4M log lines from 3 clouds", "Anomaly flagged: GCP BigQuery spend +128%"]);
+  const [log, setLog] = useState<string[]>([]);
 
-  const f = items.find((i) => i.id === sel)!;
+  useEffect(() => {
+    async function load() {
+      const { data: fs } = await supabase.from("findings").select("*").order("id");
+      const { data: ls } = await supabase
+        .from("audit_log").select("message,created_at")
+        .order("created_at", { ascending: false }).limit(20);
+      if (fs) setItems(fs as Finding[]);
+      if (ls) setLog(ls.map((l) => `${new Date(l.created_at).toLocaleTimeString()}  ${l.message}`));
+    }
+    load();
+  }, []);
+
+  const f = items.find((i) => i.id === sel) ?? items[0];
+  if (!f) return <p className="text-[var(--mute)]">Loading findings…</p>;
+
   const total = items.reduce((s, i) => s + i.waste, 0);
   const saved = items.filter((i) => i.done >= 9).reduce((s, i) => s + i.waste, 0);
 
-  function advance() {
+  async function advance() {
     if (f.done >= 9) return;
     const msg = `${ACTIONS[f.done]} · ${f.resource}`;
-    setItems((xs) => xs.map((x) => (x.id === f.id ? { ...x, done: x.done + 1 } : x)));
+    const next = f.done + 1;
+    setItems((xs) => xs.map((x) => (x.id === f.id ? { ...x, done: next } : x)));
     setLog((l) => [`${new Date().toLocaleTimeString()}  ${msg}`, ...l]);
+    await supabase.from("findings").update({ done: next }).eq("id", f.id);
+    await supabase.from("audit_log").insert({ message: msg });
   }
 
   return (
@@ -106,7 +105,7 @@ export default function Dashboard() {
           {items.map((i) => (
             <li key={i.id}>
               <button onClick={() => setSel(i.id)}
-                className={`panel w-full p-4 text-left transition-shadow ${sel === i.id ? "shadow-[0_0_0_1px_var(--cyan),0_0_24px_rgba(34,229,255,.25)]" : ""}`}>
+                className={`panel w-full p-4 text-left transition-shadow ${f.id === i.id ? "shadow-[0_0_0_1px_var(--cyan),0_0_24px_rgba(34,229,255,.25)]" : ""}`}>
                 <div className="flex items-center justify-between">
                   <span className="mono text-xs" style={{ color: CLOUD_COLOR[i.cloud] }}>{i.cloud}</span>
                   <span className="mono text-sm">${i.waste.toLocaleString()}/mo</span>
