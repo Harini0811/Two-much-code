@@ -1,4 +1,8 @@
-"use client";
+import AppShell from "@/components/AppShell";
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <AppShell>{children}</AppShell>;
+}
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
