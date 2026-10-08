@@ -1,13 +1,9 @@
-import AppShell from "@/components/AppShell";
+"use client";
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>;
-}
-
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { supabase } from "@/lib/lib/supabase";
+import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import Sidebar from "@/components/sidebar";
 
 const grotesk = Space_Grotesk({ subsets: ["latin"], variable: "--font-grotesk" });
