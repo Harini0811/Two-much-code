@@ -50,6 +50,16 @@ export default function Ingestion() {
     return a;
   }, {});
 
+  const getRowEventName = (r: Row): string => {
+    const eventName = typeof r.eventName === "string" ? r.eventName : undefined;
+    const operationName = typeof r.operationName === "string" ? r.operationName : undefined;
+    const protoPayload =
+      "protoPayload" in r && r.protoPayload && typeof r.protoPayload === "object"
+        ? (r.protoPayload as { methodName?: string })
+        : undefined;
+    return String(eventName ?? operationName ?? protoPayload?.methodName ?? "event");
+  };
+
   async function analyze() {
     setBusy(true);
     setResult("");
@@ -106,7 +116,7 @@ export default function Ingestion() {
                   return (
                     <tr key={i} className="border-t border-[var(--line)]">
                       <td className="py-2" style={{ color: COLOR[c] }}>{c}</td>
-                      <td>{String(r.eventName ?? r.operationName ?? (r as any).protoPayload?.methodName ?? "event")}</td>
+                      <td>{getRowEventName(r)}</td>
                       <td className="text-[var(--mute)]">{String(r.eventTime ?? r.time ?? r.timestamp ?? "-")}</td>
                     </tr>
                   );

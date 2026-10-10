@@ -50,7 +50,7 @@ export default function Anomalies() {
       <header>
         <h1 className="text-3xl font-semibold tracking-tight">Anomalies</h1>
         <p className="mt-1 text-[var(--mute)]">
-          Daily spend is compared with each service's first 8 days. A day more than 3 standard deviations above that baseline is flagged.
+          Daily spend is compared with each service’s first 8 days. A day more than 3 standard deviations above that baseline is flagged.
         </p>
       </header>
 
